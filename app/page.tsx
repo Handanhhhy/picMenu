@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { MenuGrid } from "@/components/menu-grid";
 import Image from "next/image";
 import { italianMenuUrl, italianParsedMenu } from "@/lib/constants";
+import { uploadToOSS } from "@/lib/oss";
 
 export interface MenuItem {
   name: string;
@@ -31,18 +32,28 @@ export default function Home() {
     const objectUrl = URL.createObjectURL(file);
     setStatus("uploading");
     setMenuUrl(objectUrl);
-    const { url } = await uploadToS3(file);
+    
+    console.log({ objectUrl });
+    const { url } = await uploadToOSS(file);
+    console.log({ url });
     setMenuUrl(url);
     setStatus("parsing");
 
-    const res = await fetch("/api/parseMenu", {
+    const res = await fetch("http://localhost:8000/api/parseMenu", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        menuUrl: url,
+        menu_url: url,
       }),
     });
-    const json = await res.json();
 
+    if (!res.ok) {
+      throw new Error('Failed to parse menu');
+    }
+
+    const json = await res.json();
     console.log({ json });
 
     setStatus("created");
